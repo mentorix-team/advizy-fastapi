@@ -1,51 +1,49 @@
-# -------------------------------
+# ===============================
 # Base image (CPU-only, stable)
-# -------------------------------
-FROM python:3.11-slim
+# ===============================
+FROM python:3.11-slim-bookworm
 
-# -------------------------------
-# Environment optimizations
-# -------------------------------
+# ===============================
+# Environment settings
+# ===============================
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV OMP_NUM_THREADS=1
-ENV MKL_NUM_THREADS=1
 
-# -------------------------------
+# ===============================
 # Set working directory
-# -------------------------------
+# ===============================
 WORKDIR /app
 
-# -------------------------------
-# System dependencies (required for torch / sentence-transformers)
-# -------------------------------
+# ===============================
+# System dependencies
+# ===============================
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# -------------------------------
-# Copy requirements first (Docker cache)
-# -------------------------------
+# ===============================
+# Copy dependency list first
+# ===============================
 COPY requirements.txt .
 
-# -------------------------------
+# ===============================
 # Install Python dependencies
-# -------------------------------
+# ===============================
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# -------------------------------
+# ===============================
 # Copy application code
-# -------------------------------
+# ===============================
 COPY . .
 
-# -------------------------------
+# ===============================
 # Expose FastAPI port
-# -------------------------------
+# ===============================
 EXPOSE 8000
 
-# -------------------------------
-# Start FastAPI
-# -------------------------------
+# ===============================
+# Start FastAPI server
+# ===============================
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
