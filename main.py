@@ -1,12 +1,14 @@
 # ...existing code...
 import uuid
 import logging
+import httpx
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from qdrant_client import QdrantClient, models
 from config import settings
 from embedder import generate_embedding
+from qdrant_client.models import VectorParams, Distance
 
 # -------------------------------------------
 # Logging
@@ -31,7 +33,7 @@ client = QdrantClient(
     api_key=settings.QDRANT_API_KEY
 )
 
-print(client.get_collection("experts"))
+# print(client.get_collection("experts"))
 
 # -------------------------------------------
 # Request Models
@@ -58,6 +60,25 @@ class SearchRequest(BaseModel):
 async def ping():
     return {"status": "ok", "service": "advizy-embedding-service"}
 
+@app.on_event("startup")
+async def ensure_collection():
+    try:
+        existing = {c.name for c in client.get_collections().collections}
+
+        if "experts" not in existing:
+            client.create_collection(
+                collection_name="experts",
+                vectors_config=VectorParams(
+                    size=384,
+                    distance=Distance.COSINE
+                )
+            )
+            logger.info("Created Qdrant collection: experts")
+        else:
+            logger.info("Qdrant collection already exists")
+
+    except Exception as e:
+        logger.warning(f"Qdrant startup check failed: {e}")
 
 # -------------------------------------------
 # Store Embedding into Qdrant
@@ -239,7 +260,6 @@ async def search_experts(request: SearchRequest):
 # -------------------------------------------
 @app.get("/send-to-node")
 async def send_to_node():
-    import httpx
 
     url = "http://localhost:5030/api/v1/fastapi/from-fastapi"
     payload = {"msg": "Hello from FastAPI!"}
